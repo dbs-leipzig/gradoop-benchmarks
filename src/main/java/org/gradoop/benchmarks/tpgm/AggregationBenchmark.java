@@ -18,17 +18,20 @@ package org.gradoop.benchmarks.tpgm;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.java.ExecutionEnvironment;
-import org.gradoop.flink.io.api.DataSource;
-import org.gradoop.flink.io.impl.csv.CSVDataSource;
-import org.gradoop.flink.model.api.tpgm.functions.TemporalAttribute;
-import org.gradoop.flink.model.impl.operators.tpgm.aggregation.MaxEdgeTime;
-import org.gradoop.flink.model.impl.operators.tpgm.aggregation.MaxTime;
-import org.gradoop.flink.model.impl.operators.tpgm.aggregation.MaxVertexTime;
-import org.gradoop.flink.model.impl.operators.tpgm.aggregation.MinEdgeTime;
-import org.gradoop.flink.model.impl.operators.tpgm.aggregation.MinTime;
-import org.gradoop.flink.model.impl.operators.tpgm.aggregation.MinVertexTime;
-import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
-import org.gradoop.flink.util.GradoopFlinkConfig;
+import org.gradoop.temporal.io.api.TemporalDataSource;
+import org.gradoop.temporal.io.impl.csv.TemporalCSVDataSource;
+import org.gradoop.temporal.model.api.TimeDimension;
+import org.gradoop.temporal.model.impl.TemporalGraph;
+import org.gradoop.temporal.model.impl.operators.aggregation.functions.AverageDuration;
+import org.gradoop.temporal.model.impl.operators.aggregation.functions.AverageEdgeDuration;
+import org.gradoop.temporal.model.impl.operators.aggregation.functions.AverageVertexDuration;
+import org.gradoop.temporal.model.impl.operators.aggregation.functions.MaxEdgeTime;
+import org.gradoop.temporal.model.impl.operators.aggregation.functions.MaxTime;
+import org.gradoop.temporal.model.impl.operators.aggregation.functions.MaxVertexTime;
+import org.gradoop.temporal.model.impl.operators.aggregation.functions.MinEdgeTime;
+import org.gradoop.temporal.model.impl.operators.aggregation.functions.MinTime;
+import org.gradoop.temporal.model.impl.operators.aggregation.functions.MinVertexTime;
+import org.gradoop.temporal.util.TemporalGradoopConfig;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,30 +63,32 @@ public class AggregationBenchmark extends BaseTpgmBenchmark {
 
     // create gradoop config
     ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-    GradoopFlinkConfig conf = GradoopFlinkConfig.createConfig(env);
+    TemporalGradoopConfig conf = TemporalGradoopConfig.createConfig(env);
 
     // read graph
-    DataSource source = new CSVDataSource(INPUT_PATH, conf);
+    TemporalDataSource source = new TemporalCSVDataSource(INPUT_PATH, conf);
     TemporalGraph graph = source.getTemporalGraph();
 
-    // we consider valid time only
-    TemporalAttribute valid = TemporalAttribute.VALID_TIME;
+    // we consider valid times only
+    TimeDimension timeDimension = TimeDimension.VALID_TIME;
 
     // get the diff
     TemporalGraph aggregate = graph.aggregate(
-      new MinVertexTime("minVertexValidFrom", valid, TemporalAttribute.Field.FROM),
-      new MinEdgeTime("minEdgeValidFrom", valid, TemporalAttribute.Field.FROM),
-      new MaxTime("maxValidFrom", valid, TemporalAttribute.Field.FROM),
-      new MaxVertexTime("maxVertexValidTo", valid, TemporalAttribute.Field.TO),
-      new MaxEdgeTime("maxEdgeValidTo", valid, TemporalAttribute.Field.TO),
-      new MinTime("minValidTo", valid, TemporalAttribute.Field.TO));
-    // todo: add 3 average aggregations here
+      new MinVertexTime("minVertexValidFrom", timeDimension, TimeDimension.Field.FROM),
+      new MinEdgeTime("minEdgeValidFrom", timeDimension, TimeDimension.Field.FROM),
+      new MaxTime("maxValidFrom", timeDimension, TimeDimension.Field.FROM),
+      new MaxVertexTime("maxVertexValidTo", timeDimension, TimeDimension.Field.TO),
+      new MaxEdgeTime("maxEdgeValidTo", timeDimension, TimeDimension.Field.TO),
+      new MinTime("minValidTo", timeDimension, TimeDimension.Field.TO),
+      new AverageDuration("avgDuration", timeDimension),
+      new AverageEdgeDuration("avgEdgeDuration", timeDimension),
+      new AverageVertexDuration("avgVertexDuration", timeDimension));
 
     // write graph
     writeOrCountGraph(aggregate, conf);
 
     // execute and write job statistics
-    env.execute(AggregationBenchmark.class.getSimpleName() + "P:" + env.getParallelism());
+    env.execute(AggregationBenchmark.class.getSimpleName() + " - P:" + env.getParallelism());
     writeCSV(env);
   }
 

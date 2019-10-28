@@ -18,20 +18,19 @@ package org.gradoop.benchmarks.tpgm;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.java.ExecutionEnvironment;
-import org.gradoop.flink.io.api.DataSource;
-import org.gradoop.flink.io.impl.csv.CSVDataSource;
-import org.gradoop.flink.model.api.tpgm.functions.TemporalPredicate;
-import org.gradoop.flink.model.impl.functions.tpgm.All;
-import org.gradoop.flink.model.impl.functions.tpgm.AsOf;
-import org.gradoop.flink.model.impl.functions.tpgm.Between;
-import org.gradoop.flink.model.impl.functions.tpgm.ContainedIn;
-import org.gradoop.flink.model.impl.functions.tpgm.CreatedIn;
-import org.gradoop.flink.model.impl.functions.tpgm.DeletedIn;
-import org.gradoop.flink.model.impl.functions.tpgm.FromTo;
-import org.gradoop.flink.model.impl.functions.tpgm.ValidDuring;
-import org.gradoop.flink.model.impl.operators.tpgm.snapshot.Snapshot;
-import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
-import org.gradoop.flink.util.GradoopFlinkConfig;
+import org.gradoop.temporal.io.api.TemporalDataSource;
+import org.gradoop.temporal.io.impl.csv.TemporalCSVDataSource;
+import org.gradoop.temporal.model.api.functions.TemporalPredicate;
+import org.gradoop.temporal.model.impl.TemporalGraph;
+import org.gradoop.temporal.model.impl.functions.predicates.All;
+import org.gradoop.temporal.model.impl.functions.predicates.AsOf;
+import org.gradoop.temporal.model.impl.functions.predicates.Between;
+import org.gradoop.temporal.model.impl.functions.predicates.ContainedIn;
+import org.gradoop.temporal.model.impl.functions.predicates.CreatedIn;
+import org.gradoop.temporal.model.impl.functions.predicates.DeletedIn;
+import org.gradoop.temporal.model.impl.functions.predicates.FromTo;
+import org.gradoop.temporal.model.impl.functions.predicates.ValidDuring;
+import org.gradoop.temporal.util.TemporalGradoopConfig;
 
 import java.io.File;
 import java.io.IOException;
@@ -140,10 +139,10 @@ public class SnapshotBenchmark extends BaseTpgmBenchmark {
 
     // create gradoop config
     ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-    GradoopFlinkConfig conf = GradoopFlinkConfig.createConfig(env);
+    TemporalGradoopConfig conf = TemporalGradoopConfig.createConfig(env);
 
     // read graph
-    DataSource source = new CSVDataSource(INPUT_PATH, conf);
+    TemporalDataSource source = new TemporalCSVDataSource(INPUT_PATH, conf);
     TemporalGraph graph = source.getTemporalGraph();
 
     // get temporal predicate
@@ -175,12 +174,11 @@ public class SnapshotBenchmark extends BaseTpgmBenchmark {
       temporalPredicate = new All();
       break;
     default:
-      throw new IllegalArgumentException("The given query type '" + QUERY_TYPE +
-        "' is not supported.");
+      throw new IllegalArgumentException("The given query type '" + QUERY_TYPE + "' is not supported.");
     }
 
     // get the snapshot
-    TemporalGraph snapshot = graph.callForGraph(new Snapshot(temporalPredicate));
+    TemporalGraph snapshot = graph.snapshot(temporalPredicate);
 
     // apply optional verification
     if (VERIFICATION) {

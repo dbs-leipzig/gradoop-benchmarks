@@ -20,14 +20,16 @@ import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FileSystem;
 import org.gradoop.benchmarks.AbstractRunner;
-import org.gradoop.flink.io.api.DataSink;
-import org.gradoop.flink.io.impl.csv.CSVDataSink;
-import org.gradoop.flink.model.impl.tpgm.TemporalGraph;
 import org.gradoop.flink.util.GradoopFlinkConfig;
+import org.gradoop.temporal.io.impl.csv.TemporalCSVDataSink;
+import org.gradoop.temporal.model.impl.TemporalGraph;
 
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Base class for all TPGM benchmarks.
+ */
 abstract class BaseTpgmBenchmark extends AbstractRunner {
   /**
    * Option to declare path to indexed input graph
@@ -64,14 +66,14 @@ abstract class BaseTpgmBenchmark extends AbstractRunner {
   static boolean COUNT_RESULT;
 
   static {
-    OPTIONS.addRequiredOption(OPTION_INPUT_PATH, "input", true, "Path to indexed source files.");
-    OPTIONS.addRequiredOption(OPTION_OUTPUT_PATH, "output", true, "Path to output file");
-    OPTIONS.addRequiredOption(OPTION_CSV_PATH, "csv", true, "Path to csv statistics");
+    OPTIONS.addRequiredOption(OPTION_INPUT_PATH, "input", true, "Path to source files.");
+    OPTIONS.addRequiredOption(OPTION_OUTPUT_PATH, "output", true, "Path to output file.");
+    OPTIONS.addRequiredOption(OPTION_CSV_PATH, "csv", true,
+      "Path to csv statistics file (will be created if not available).");
     OPTIONS.addOption(OPTION_COUNT_RESULT, "count", false, "Only count result instead of writing.");
   }
 
-  static void writeOrCountGraph(TemporalGraph temporalGraph, GradoopFlinkConfig conf)
-    throws IOException {
+  static void writeOrCountGraph(TemporalGraph temporalGraph, GradoopFlinkConfig conf) throws IOException {
     if (COUNT_RESULT) {
       // only count the results and write it to a csv file
       DataSet<Tuple2<String, Long>> sum = temporalGraph.getVertices()
@@ -90,7 +92,7 @@ abstract class BaseTpgmBenchmark extends AbstractRunner {
       // write graph to sink
       // We want to reuse the metadata file because the properties won't change
       String metadataFile = getPath(INPUT_PATH) + "metadata.csv";
-      DataSink sink = new CSVDataSink(OUTPUT_PATH, metadataFile, conf);
+      TemporalCSVDataSink sink = new TemporalCSVDataSink(OUTPUT_PATH, metadataFile, conf);
       sink.write(temporalGraph, true);
     }
   }
