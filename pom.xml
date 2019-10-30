@@ -61,6 +61,12 @@
             <version>${dep.gradoop.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.gradoop</groupId>
+            <artifactId>gradoop-temporal</artifactId>
+            <version>${dep.gradoop.version}</version>
+        </dependency>
+
         <!-- Apache Flink dependencies -->
         <dependency>
             <groupId>org.apache.flink</groupId>

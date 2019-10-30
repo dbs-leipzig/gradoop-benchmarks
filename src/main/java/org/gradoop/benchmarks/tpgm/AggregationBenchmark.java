@@ -59,7 +59,7 @@ public class AggregationBenchmark extends BaseTpgmBenchmark {
     }
 
     // read cmd arguments
-    readCMDArguments(cmd);
+    readBaseCMDArguments(cmd);
 
     // create gradoop config
     ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
@@ -93,21 +93,10 @@ public class AggregationBenchmark extends BaseTpgmBenchmark {
   }
 
   /**
-   * Reads the given arguments from command line
-   *
-   * @param cmd command line
-   */
-  private static void readCMDArguments(CommandLine cmd) {
-    INPUT_PATH   = cmd.getOptionValue(OPTION_INPUT_PATH);
-    OUTPUT_PATH  = cmd.getOptionValue(OPTION_OUTPUT_PATH);
-    CSV_PATH     = cmd.getOptionValue(OPTION_CSV_PATH);
-  }
-
-  /**
    * Method to create and add lines to a csv-file
    *
    * @param env given ExecutionEnvironment
-   * @throws IOException exeption during file writing
+   * @throws IOException exception during file writing
    */
   private static void writeCSV(ExecutionEnvironment env) throws IOException {
     String head = String

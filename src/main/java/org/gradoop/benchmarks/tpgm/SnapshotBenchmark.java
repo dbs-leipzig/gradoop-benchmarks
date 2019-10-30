@@ -135,6 +135,7 @@ public class SnapshotBenchmark extends BaseTpgmBenchmark {
     performSanityCheck(cmd);
 
     // read cmd arguments
+    readBaseCMDArguments(cmd);
     readCMDArguments(cmd);
 
     // create gradoop config
@@ -229,10 +230,6 @@ public class SnapshotBenchmark extends BaseTpgmBenchmark {
    * @param cmd command line
    */
   private static void readCMDArguments(CommandLine cmd) {
-    INPUT_PATH   = cmd.getOptionValue(OPTION_INPUT_PATH);
-    OUTPUT_PATH  = cmd.getOptionValue(OPTION_OUTPUT_PATH);
-    CSV_PATH     = cmd.getOptionValue(OPTION_CSV_PATH);
-
     String queryFrom = cmd.getOptionValue(OPTION_QUERY_FROM);
     QUERY_FROM   = queryFrom == null ? null : Long.valueOf(queryFrom);
 
@@ -241,7 +238,6 @@ public class SnapshotBenchmark extends BaseTpgmBenchmark {
 
     QUERY_TYPE   = cmd.getOptionValue(OPTION_QUERY_TYPE);
     VERIFICATION = cmd.hasOption(OPTION_VERIFICATION);
-    COUNT_RESULT = cmd.hasOption(OPTION_COUNT_RESULT);
   }
 
   /**

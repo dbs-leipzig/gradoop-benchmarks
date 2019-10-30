@@ -84,6 +84,7 @@ public class DiffBenchmark extends BaseTpgmBenchmark {
     }
 
     // read cmd arguments
+    readBaseCMDArguments(cmd);
     readCMDArguments(cmd);
 
     // create gradoop config
@@ -116,9 +117,6 @@ public class DiffBenchmark extends BaseTpgmBenchmark {
    * @param cmd command line
    */
   private static void readCMDArguments(CommandLine cmd) {
-    INPUT_PATH   = cmd.getOptionValue(OPTION_INPUT_PATH);
-    OUTPUT_PATH  = cmd.getOptionValue(OPTION_OUTPUT_PATH);
-    CSV_PATH     = cmd.getOptionValue(OPTION_CSV_PATH);
     QUERY_FROM_1 = Long.valueOf(cmd.getOptionValue(OPTION_QUERY_1));
     QUERY_FROM_2 = Long.valueOf(cmd.getOptionValue(OPTION_QUERY_2));
     VERIFICATION = cmd.hasOption(OPTION_VERIFICATION);
