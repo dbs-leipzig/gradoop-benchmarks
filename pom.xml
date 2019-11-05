@@ -119,6 +119,12 @@
                         </goals>
                         <configuration>
                             <minimizeJar>true</minimizeJar>
+                            <relocations>
+                                <relocation>
+                                    <pattern>org.apache.commons.cli</pattern>
+                                    <shadedPattern>org.gradoop.examples.thirdparty.commons-cli</shadedPattern>
+                                </relocation>
+                            </relocations>
                             <filters>
                                 <!-- Filters out signed files to avoid SecurityException when integrating a signed jar in the resulting jar. -->
                                 <filter>

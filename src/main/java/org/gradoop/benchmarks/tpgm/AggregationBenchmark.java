@@ -16,7 +16,6 @@
 package org.gradoop.benchmarks.tpgm;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.gradoop.temporal.io.api.TemporalDataSource;
 import org.gradoop.temporal.io.impl.csv.TemporalCSVDataSource;
@@ -33,9 +32,7 @@ import org.gradoop.temporal.model.impl.operators.aggregation.functions.MinTime;
 import org.gradoop.temporal.model.impl.operators.aggregation.functions.MinVertexTime;
 import org.gradoop.temporal.util.TemporalGradoopConfig;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -45,8 +42,8 @@ public class AggregationBenchmark extends BaseTpgmBenchmark {
 
   /**
    * Main program to run the benchmark. Arguments are the available options.
-   * Example: {@code /path/to/flink run -c org.gradoop.benchmark.tpgm.SnapshotBenchmark
-   * path/to/gradoop-examples.jar -i hdfs:///graph -o hdfs:///output -c results.csv}
+   * Example: {@code /path/to/flink run -c org.gradoop.benchmarks.tpgm.AggregationBenchmark
+   * path/to/gradoop-benchmarks.jar -i hdfs:///graph -o hdfs:///output -c results.csv}
    *
    * @param args program arguments
    * @throws Exception in case of error
@@ -99,26 +96,13 @@ public class AggregationBenchmark extends BaseTpgmBenchmark {
    * @throws IOException exception during file writing
    */
   private static void writeCSV(ExecutionEnvironment env) throws IOException {
-    String head = String
-      .format("%s|%s|%s%n",
-        "Parallelism",
-        "dataset",
-        "Runtime(s)");
+    String head = String.format("%s|%s|%s", "Parallelism", "dataset", "Runtime(s)");
 
-    String tail = String
-      .format("%s|%s|%s%n",
-        env.getParallelism(),
-        INPUT_PATH,
-        env.getLastJobExecutionResult().getNetRuntime(TimeUnit.SECONDS));
+    String tail = String.format("%s|%s|%s",
+      env.getParallelism(),
+      INPUT_PATH,
+      env.getLastJobExecutionResult().getNetRuntime(TimeUnit.SECONDS));
 
-    File f = new File(CSV_PATH);
-    if (f.exists() && !f.isDirectory()) {
-      FileUtils.writeStringToFile(f, tail, true);
-    } else {
-      PrintWriter writer = new PrintWriter(CSV_PATH, "UTF-8");
-      writer.print(head);
-      writer.print(tail);
-      writer.close();
-    }
+    writeToCSVFile(head, tail);
   }
 }

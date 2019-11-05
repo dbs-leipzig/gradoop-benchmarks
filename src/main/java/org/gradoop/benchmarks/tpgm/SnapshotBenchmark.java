@@ -16,7 +16,6 @@
 package org.gradoop.benchmarks.tpgm;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.gradoop.temporal.io.api.TemporalDataSource;
 import org.gradoop.temporal.io.impl.csv.TemporalCSVDataSource;
@@ -32,9 +31,7 @@ import org.gradoop.temporal.model.impl.functions.predicates.FromTo;
 import org.gradoop.temporal.model.impl.functions.predicates.ValidDuring;
 import org.gradoop.temporal.util.TemporalGradoopConfig;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -117,8 +114,8 @@ public class SnapshotBenchmark extends BaseTpgmBenchmark {
 
   /**
    * Main program to run the benchmark. Arguments are the available options.
-   * Example: {@code /path/to/flink run -c org.gradoop.benchmark.tpgm.SnapshotBenchmark
-   * path/to/gradoop-examples.jar -i hdfs:///graph -o hdfs:///output -c results.csv
+   * Example: {@code /path/to/flink run -c org.gradoop.benchmarks.tpgm.SnapshotBenchmark
+   * path/to/gradoop-benchmarks.jar -i hdfs:///graph -o hdfs:///output -c results.csv
    * -f 1287000000000 -y asof}
    *
    * @param args program arguments
@@ -244,11 +241,11 @@ public class SnapshotBenchmark extends BaseTpgmBenchmark {
    * Method to create and add lines to a csv-file
    *
    * @param env given ExecutionEnvironment
-   * @throws IOException exeption during file writing
+   * @throws IOException exception during file writing
    */
   private static void writeCSV(ExecutionEnvironment env) throws IOException {
     String head = String
-      .format("%s|%s|%s|%s|%s|%s|%s|%s%n",
+      .format("%s|%s|%s|%s|%s|%s|%s|%s",
         "Parallelism",
         "dataset",
         "query-type",
@@ -259,7 +256,7 @@ public class SnapshotBenchmark extends BaseTpgmBenchmark {
         "Runtime(s)");
 
     String tail = String
-      .format("%s|%s|%s|%s|%s|%s|%s|%s%n",
+      .format("%s|%s|%s|%s|%s|%s|%s|%s",
         env.getParallelism(),
         INPUT_PATH,
         QUERY_TYPE,
@@ -269,14 +266,6 @@ public class SnapshotBenchmark extends BaseTpgmBenchmark {
         COUNT_RESULT,
         env.getLastJobExecutionResult().getNetRuntime(TimeUnit.SECONDS));
 
-    File f = new File(CSV_PATH);
-    if (f.exists() && !f.isDirectory()) {
-      FileUtils.writeStringToFile(f, tail, true);
-    } else {
-      PrintWriter writer = new PrintWriter(CSV_PATH, "UTF-8");
-      writer.print(head);
-      writer.print(tail);
-      writer.close();
-    }
+    writeToCSVFile(head, tail);
   }
 }

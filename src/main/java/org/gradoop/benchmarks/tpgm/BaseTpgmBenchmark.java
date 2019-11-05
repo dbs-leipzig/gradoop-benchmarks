@@ -26,8 +26,15 @@ import org.gradoop.temporal.io.api.TemporalDataSink;
 import org.gradoop.temporal.io.impl.csv.TemporalCSVDataSink;
 import org.gradoop.temporal.model.impl.TemporalGraph;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Base class for the TPGM benchmarks.
@@ -48,7 +55,7 @@ abstract class BaseTpgmBenchmark extends AbstractRunner {
   /**
    * Option to count the result sets instead of writing them
    */
-  static final String OPTION_COUNT_RESULT = "n";
+  private static final String OPTION_COUNT_RESULT = "n";
 
   /**
    * Used input path
@@ -57,11 +64,11 @@ abstract class BaseTpgmBenchmark extends AbstractRunner {
   /**
    * Used output path
    */
-  static String OUTPUT_PATH;
+  private static String OUTPUT_PATH;
   /**
    * Used csv path
    */
-  static String CSV_PATH;
+  private static String CSV_PATH;
   /**
    * Used count only flag. The graph elements will be counted only if this is set to true.
    */
@@ -100,7 +107,7 @@ abstract class BaseTpgmBenchmark extends AbstractRunner {
         // sum the values
         .sum(1);
 
-      sum.writeAsCsv(getPath(OUTPUT_PATH) + "count.csv", FileSystem.WriteMode.OVERWRITE);
+      sum.writeAsCsv(appendSeparator(OUTPUT_PATH) + "count.csv", FileSystem.WriteMode.OVERWRITE);
     } else {
       // write graph to sink
       TemporalDataSink sink = new TemporalCSVDataSink(OUTPUT_PATH, conf);
@@ -121,13 +128,24 @@ abstract class BaseTpgmBenchmark extends AbstractRunner {
   }
 
   /**
-   * Get the path with a separator char at the end.
+   * Writes the specified line (csvTail) to the csv file given by option {@value OPTION_CSV_PATH}.
+   * If the file does not exist, the file will be created and the specified header (csvHead) will be appended
+   * as first line.
    *
-   * @param path the path to append the separator if it do not have it
-   * @return the path as string with a separator at the end
+   * @param csvHead the header (i.e., column names) for the csv file
+   * @param csvTail the line to append
+   * @throws IOException in case of a IO failure
    */
-  private static String getPath(String path) {
-    return path.endsWith(File.separator) ? path : path + File.separator;
+  static void writeToCSVFile(String csvHead, String csvTail) throws IOException {
+    Path path = Paths.get(CSV_PATH);
+    List<String> linesToWrite;
+    if (Files.exists(path)) {
+      linesToWrite = Collections.singletonList(csvTail);
+    } else {
+      linesToWrite = Arrays.asList(csvHead, csvTail);
+    }
+    Files.write(path, linesToWrite, StandardCharsets.UTF_8, StandardOpenOption.CREATE,
+      StandardOpenOption.APPEND);
   }
 
 }

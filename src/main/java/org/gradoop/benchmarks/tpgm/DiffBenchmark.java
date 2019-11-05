@@ -16,7 +16,6 @@
 package org.gradoop.benchmarks.tpgm;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.gradoop.temporal.io.api.TemporalDataSource;
 import org.gradoop.temporal.io.impl.csv.TemporalCSVDataSource;
@@ -24,9 +23,7 @@ import org.gradoop.temporal.model.impl.TemporalGraph;
 import org.gradoop.temporal.model.impl.functions.predicates.AsOf;
 import org.gradoop.temporal.util.TemporalGradoopConfig;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -55,11 +52,11 @@ public class DiffBenchmark extends BaseTpgmBenchmark {
   /**
    * Used first query timestamp in milliseconds
    */
-  private static Long QUERY_FROM_1;
+  private static long QUERY_FROM_1;
   /**
    * Used second query timestamp in milliseconds
    */
-  private static Long QUERY_FROM_2;
+  private static long QUERY_FROM_2;
 
   static {
     OPTIONS.addRequiredOption(OPTION_QUERY_1, "queryts1", true, "Used first query timestamp [ms]");
@@ -69,8 +66,8 @@ public class DiffBenchmark extends BaseTpgmBenchmark {
 
   /**
    * Main program to run the benchmark. Arguments are the available options.
-   * Example: {@code /path/to/flink run -c org.gradoop.benchmark.tpgm.SnapshotBenchmark
-   * path/to/gradoop-examples.jar -i hdfs:///graph -o hdfs:///output -c results.csv
+   * Example: {@code /path/to/flink run -c org.gradoop.benchmarks.tpgm.DiffBenchmark
+   * path/to/gradoop-benchmarks.jar -i hdfs:///graph -o hdfs:///output -c results.csv
    * -x 1287000000000 -y 1230000000000}
    *
    * @param args program arguments
@@ -117,8 +114,8 @@ public class DiffBenchmark extends BaseTpgmBenchmark {
    * @param cmd command line
    */
   private static void readCMDArguments(CommandLine cmd) {
-    QUERY_FROM_1 = Long.valueOf(cmd.getOptionValue(OPTION_QUERY_1));
-    QUERY_FROM_2 = Long.valueOf(cmd.getOptionValue(OPTION_QUERY_2));
+    QUERY_FROM_1 = Long.parseLong(cmd.getOptionValue(OPTION_QUERY_1));
+    QUERY_FROM_2 = Long.parseLong(cmd.getOptionValue(OPTION_QUERY_2));
     VERIFICATION = cmd.hasOption(OPTION_VERIFICATION);
   }
 
@@ -126,11 +123,11 @@ public class DiffBenchmark extends BaseTpgmBenchmark {
    * Method to create and add lines to a csv-file
    *
    * @param env given ExecutionEnvironment
-   * @throws IOException exeption during file writing
+   * @throws IOException exception during file writing
    */
   private static void writeCSV(ExecutionEnvironment env) throws IOException {
     String head = String
-      .format("%s|%s|%s|%s|%s|%s%n",
+      .format("%s|%s|%s|%s|%s|%s",
         "Parallelism",
         "dataset",
         "asOf1(ms)",
@@ -139,7 +136,7 @@ public class DiffBenchmark extends BaseTpgmBenchmark {
         "Runtime(s)");
 
     String tail = String
-      .format("%s|%s|%s|%s|%s|%s%n",
+      .format("%s|%s|%s|%s|%s|%s",
         env.getParallelism(),
         INPUT_PATH,
         QUERY_FROM_1,
@@ -147,14 +144,6 @@ public class DiffBenchmark extends BaseTpgmBenchmark {
         VERIFICATION,
         env.getLastJobExecutionResult().getNetRuntime(TimeUnit.SECONDS));
 
-    File f = new File(CSV_PATH);
-    if (f.exists() && !f.isDirectory()) {
-      FileUtils.writeStringToFile(f, tail, true);
-    } else {
-      PrintWriter writer = new PrintWriter(CSV_PATH, "UTF-8");
-      writer.print(head);
-      writer.print(tail);
-      writer.close();
-    }
+    writeToCSVFile(head, tail);
   }
 }
