@@ -122,7 +122,7 @@
                             <relocations>
                                 <relocation>
                                     <pattern>org.apache.commons.cli</pattern>
-                                    <shadedPattern>org.gradoop.examples.thirdparty.commons-cli</shadedPattern>
+                                    <shadedPattern>org.gradoop.examples.thirdparty.commons_cli</shadedPattern>
                                 </relocation>
                             </relocations>
                             <filters>
