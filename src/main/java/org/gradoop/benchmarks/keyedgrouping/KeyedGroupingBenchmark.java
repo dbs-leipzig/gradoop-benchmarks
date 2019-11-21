@@ -13,20 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradoop.benchmarks.grouping;
+package org.gradoop.benchmarks.keyedgrouping;
 
 import com.google.common.collect.Lists;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.io.FileUtils;
 import org.gradoop.benchmarks.AbstractRunner;
+import org.gradoop.common.model.api.entities.Edge;
+import org.gradoop.common.model.api.entities.Vertex;
 import org.gradoop.flink.model.api.functions.AggregateFunction;
-import org.gradoop.flink.model.api.operators.UnaryBaseGraphToBaseGraphOperator;
+import org.gradoop.flink.model.api.functions.KeyFunction;
 import org.gradoop.flink.model.impl.epgm.LogicalGraph;
+import org.gradoop.flink.model.impl.operators.aggregation.functions.average.AverageProperty;
 import org.gradoop.flink.model.impl.operators.aggregation.functions.count.Count;
 import org.gradoop.flink.model.impl.operators.aggregation.functions.max.MaxProperty;
 import org.gradoop.flink.model.impl.operators.aggregation.functions.min.MinProperty;
-import org.gradoop.flink.model.impl.operators.grouping.Grouping;
-import org.gradoop.flink.model.impl.operators.grouping.GroupingStrategy;
+import org.gradoop.flink.model.impl.operators.aggregation.functions.sum.SumProperty;
+import org.gradoop.flink.model.impl.operators.keyedgrouping.KeyedGrouping;
+import org.gradoop.flink.model.impl.operators.keyedgrouping.keys.LabelKeyFunction;
+import org.gradoop.flink.model.impl.operators.keyedgrouping.keys.PropertyKeyFunction;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,24 +44,20 @@ import java.util.regex.Pattern;
 /**
  * A dedicated program for parametrized graph grouping benchmark.
  */
-public class GroupingBenchmark extends AbstractRunner {
+public class KeyedGroupingBenchmark extends AbstractRunner {
 
   /**
    * Option to declare path to input graph
    */
   private static final String OPTION_INPUT_PATH = "i";
   /**
-   * Option to declare input graph format (csv, indexed, json)
+   * Option to declare input graph format (csv, indexed)
    */
   private static final String OPTION_INPUT_FORMAT = "f";
   /**
    * Option to declare path to output graph
    */
   private static final String OPTION_OUTPUT_PATH = "o";
-  /**
-   * Option to set the grouping strategy
-   */
-  private static final String OPTION_GROUPING_STRATEGY = "s";
   /**
    * Vertex grouping key option
    */
@@ -93,10 +94,6 @@ public class GroupingBenchmark extends AbstractRunner {
    * Used vertex aggregation keys
    */
   private static final String OPTION_EDGE_AGGREGATION_KEYS = "eak";
-  /**
-   * Grouping strategy
-   */
-  private static GroupingStrategy STRATEGY = GroupingStrategy.GROUP_REDUCE;
   /**
    * Used VertexKey for grouping
    */
@@ -150,16 +147,13 @@ public class GroupingBenchmark extends AbstractRunner {
    */
   private static final Pattern TOKEN_SEPARATOR = Pattern.compile(",");
 
-
   static {
     OPTIONS.addOption(OPTION_INPUT_PATH, "graph-input-path", true,
-      "Directory of the input graph");
+      "Path to the input graph directory");
     OPTIONS.addOption(OPTION_INPUT_FORMAT, "input-format", true,
       "Format of the input [csv, indexed] Default: " + DEFAULT_FORMAT);
     OPTIONS.addOption(OPTION_OUTPUT_PATH, "output-path", true,
       "Path to the output graph");
-    OPTIONS.addOption(OPTION_GROUPING_STRATEGY, "strategy", true,
-      "Grouping strategy (GR, GC)");
     OPTIONS.addOption(OPTION_USE_VERTEX_LABELS, "use-vertex-labels", false,
       "Group on vertex labels");
     OPTIONS.addOption(OPTION_USE_EDGE_LABELS, "use-edge-labels", false,
@@ -168,19 +162,19 @@ public class GroupingBenchmark extends AbstractRunner {
       "EPGMProperty key to group vertices on");
     OPTIONS.addOption(OPTION_EDGE_GROUPING_KEY, "edge-grouping-key", true,
       "EPGMProperty key to group edges on");
-    OPTIONS.addOption(OPTION_CSV_PATH, "csv-path", true, "Path of the " +
-      "generated CSV-File");
+    OPTIONS.addOption(OPTION_CSV_PATH, "csv-path", true, "Path " +
+      "of the generated CSV-File");
     OPTIONS.addOption(OPTION_VERTEX_AGGREGATION_FUNCS, "vertex-aggregator",
-      true, "Applied aggregation functions on vertices (min, max, count, none or" +
-        " list of these)");
+      true, "Applied aggregation functions on vertices (min, max, count,"+
+        " mean or list of these)");
     OPTIONS.addOption(OPTION_VERTEX_AGGREGATION_KEYS,
-      "vertex-aggregation-keys", true, "Keys for the vertex aggregation" +
-        "functions (needed by max and min aggregation)");
+      "vertex-aggregation-keys", true, "Keys for the vertex "+
+        "aggregation functions (needed by max, min and mean aggregation)");
     OPTIONS.addOption(OPTION_EDGE_AGGREGATION_FUNCS, "edge-aggregator", true,
-      "Applied aggregation functions on edges (min, max, count, none or list of these)");
+      "Applied aggregation functions on edges (min, max, count, mean or list of these)");
     OPTIONS.addOption(OPTION_EDGE_AGGREGATION_KEYS, "edge-aggregation-keys",
-      true, "keys for the edge aggregation functions (needed by max and min " +
-        "aggregation)");
+      true, "Keys for the edge aggregation functions (needed by max,"  +
+        " min and mean aggregation) ");
   }
 
   /**
@@ -191,7 +185,8 @@ public class GroupingBenchmark extends AbstractRunner {
    */
   @SuppressWarnings("unchecked")
   public static void main(String[] args) throws Exception {
-    CommandLine cmd = parseArguments(args, GroupingBenchmark.class.getName());
+
+    CommandLine cmd = parseArguments(args, KeyedGroupingBenchmark.class.getName());
     if (cmd == null) {
       return;
     }
@@ -206,34 +201,35 @@ public class GroupingBenchmark extends AbstractRunner {
 
     // initialize grouping keys
     List<String> vertexKeys = Lists.newArrayList();
-    if (VERTEX_GROUPING_KEYS != null) {
-      vertexKeys = getKeys(VERTEX_GROUPING_KEYS);
-    }
 
-    List<String> edgeKeys = Lists.newArrayList();
-    if (EDGE_GROUPING_KEYS != null) {
-      edgeKeys = getKeys(EDGE_GROUPING_KEYS);
-    }
+    // the List of KeyFunctions for the vertices of the graph
+    List<KeyFunction<Vertex, ?>> vertexGroupingKeys = getVertexGroupingKeys(USE_VERTEX_LABELS,VERTEX_GROUPING_KEYS);
 
-    // initialize aggregators
+    // the List of KeyFunctions for the edges of the graph
+    List<KeyFunction<Edge, ?>> edgeGroupingKeys = getEdgeGroupingKeys(USE_EDGE_LABELS, EDGE_GROUPING_KEYS);
+
+    // initialize vertex aggregators
     List<AggregateFunction> vAggregators = Lists.newArrayList();
+
+    // initialize edge aggregators
     List<AggregateFunction> eAggregators = Lists.newArrayList();
 
+    // get the vertex aggregator functions
     if (cmd.hasOption(OPTION_VERTEX_AGGREGATION_FUNCS)) {
       vAggregators =
         getAggregators(VERTEX_AGGREGATORS, VERTEX_AGGREGATOR_KEYS);
     }
-
+    // get the edge aggregator functions
     if (cmd.hasOption(OPTION_EDGE_AGGREGATION_FUNCS)) {
-      eAggregators = getAggregators(EDGE_AGGREGATORS, EDGE_AGGREGATOR_KEYS);
+      eAggregators =
+        getAggregators(EDGE_AGGREGATORS, EDGE_AGGREGATOR_KEYS);
     }
-    // build grouping operator
-    Grouping grouping = (Grouping) getOperator(STRATEGY,
-      vertexKeys, edgeKeys, USE_VERTEX_LABELS, USE_EDGE_LABELS, vAggregators,
-      eAggregators);
+    // instantiate the keyed grouping
+    KeyedGrouping keyedGrouping = new KeyedGrouping(vertexGroupingKeys,
+          vAggregators, edgeGroupingKeys, eAggregators);
 
     // call grouping on whole database graph
-    LogicalGraph summarizedGraph = graphDatabase.callForGraph(grouping);
+    LogicalGraph summarizedGraph = graphDatabase.callForGraph(keyedGrouping);
     if (summarizedGraph != null) {
       writeLogicalGraph(summarizedGraph, OUTPUT_PATH);
       writeCSV();
@@ -242,6 +238,53 @@ public class GroupingBenchmark extends AbstractRunner {
     }
   }
 
+  /**
+   * Method to get the vertexGroupingKeys
+   *
+   * @param useLabels   boolean if the labels of the vertices should be considered by grouping
+   * @param groupingKeys   list of PropertyValueKeys
+   * @return the vertex grouping keys as a list of KeyFunctions
+   */
+  private static List<KeyFunction<Vertex, ?>> getVertexGroupingKeys(
+    boolean useLabels, String groupingKeys){
+
+    List<String> vertexKeys = Lists.newArrayList();
+    List<KeyFunction<Vertex, ?>> vertexGroupingKeys = Lists.newArrayList();
+    if (groupingKeys != null) {
+      vertexKeys = getKeys(groupingKeys);
+      for (String key : vertexKeys) {
+        vertexGroupingKeys.add(new PropertyKeyFunction(key));
+      }
+    }
+    if(useLabels){
+      vertexGroupingKeys.add(new LabelKeyFunction<Vertex>());
+    }
+    return vertexGroupingKeys;
+  }
+
+  /**
+   * Method to get the edgeGroupingKeys
+   *
+   * @param useLabels       boolean if the labels of the edges should be considered by grouping
+   * @param groupingKeys    list of PropertyValueKeys as whole string
+   * @return the edge grouping keys as a list of KeyFunctions
+   */
+  private static List<KeyFunction<Edge, ?>> getEdgeGroupingKeys(
+    boolean useLabels, String groupingKeys){
+
+    List<String> edgeKeys = Lists.newArrayList();
+    List<KeyFunction<Edge, ?>> edgeGroupingKeys = Lists.newArrayList();
+    if (groupingKeys != null) {
+      edgeKeys = getKeys(groupingKeys);
+      for (String key : edgeKeys) {
+        edgeGroupingKeys.add(new PropertyKeyFunction(key));
+      }
+    }
+    if(useLabels){
+      edgeGroupingKeys.add(new LabelKeyFunction<Edge>());
+    }
+    return edgeGroupingKeys;
+  }
 
   /**
    * Checks if the minimum of arguments is provided
@@ -268,7 +311,6 @@ public class GroupingBenchmark extends AbstractRunner {
       throw new IllegalArgumentException("Edge aggregator need to be set! " +
         "(max, min, count, none (or list of these)");
     }
-
   }
 
   /**
@@ -285,14 +327,6 @@ public class GroupingBenchmark extends AbstractRunner {
     // input format
     INPUT_FORMAT = cmd.hasOption(OPTION_INPUT_FORMAT) ?
       cmd.getOptionValue(OPTION_INPUT_FORMAT).toLowerCase() : DEFAULT_FORMAT;
-
-    // initialize grouping strategy
-    if (cmd.hasOption(OPTION_GROUPING_STRATEGY)) {
-      String value = cmd.getOptionValue(OPTION_GROUPING_STRATEGY);
-      if (value.toUpperCase().equals("GC")) {
-        STRATEGY = GroupingStrategy.GROUP_COMBINE;
-      }
-    }
 
     // read if vertex or edge keys should be used
     boolean useVertexKey = cmd.hasOption(OPTION_VERTEX_GROUPING_KEY);
@@ -313,7 +347,6 @@ public class GroupingBenchmark extends AbstractRunner {
       VERTEX_AGGREGATOR_KEYS =
         cmd.getOptionValue(OPTION_VERTEX_AGGREGATION_KEYS);
     }
-
     EDGE_AGGREGATORS = cmd.getOptionValue(OPTION_EDGE_AGGREGATION_FUNCS);
     boolean edgeAggKeys = cmd.hasOption(OPTION_EDGE_AGGREGATION_KEYS);
     if (edgeAggKeys) {
@@ -346,7 +379,6 @@ public class GroupingBenchmark extends AbstractRunner {
     if(keys==null){
       keys = " ";
     }
-
     List<AggregateFunction> aggregatorList = Lists.newArrayList();
     List<String> aggsList = getKeys(aggs);
     List<String> keyList = getKeys(keys);
@@ -366,65 +398,16 @@ public class GroupingBenchmark extends AbstractRunner {
         aggregatorList.add(new MinProperty(keyList.get(j)));
         j++;
         break;
+      case "mean":
+        aggregatorList.add(new AverageProperty(keyList.get(j)));
+        j++;
+        break;
       default:
         aggregatorList.add(null);
         break;
       }
     }
     return aggregatorList;
-  }
-
-  /**
-   * Returns the grouping operator implementation based on the given strategy.
-   *
-   * @param strategy        grouping strategy to use
-   * @param vertexKeys      vertex property keys used for grouping
-   * @param edgeKeys        edge property keys used for grouping
-   * @param useVertexLabels use vertex label for grouping, true/false
-   * @param useEdgeLabels   use edge label for grouping, true/false
-   * @param vAggs           used vertex aggregators
-   * @param eAggs           used edge aggregators
-   * @return grouping operator implementation
-   */
-  private static UnaryBaseGraphToBaseGraphOperator<LogicalGraph> getOperator(GroupingStrategy strategy,
-    List<String> vertexKeys, List<String> edgeKeys,
-    boolean useVertexLabels, boolean useEdgeLabels,
-    List<AggregateFunction> vAggs, List<AggregateFunction> eAggs) {
-
-    Grouping.GroupingBuilder builder =
-      new Grouping.GroupingBuilder()
-        .setStrategy(strategy)
-        .useVertexLabel(useVertexLabels)
-        .useEdgeLabel(useEdgeLabels);
-
-    if (vAggs.size() > 0) {
-      for (AggregateFunction agg:vAggs) {
-        if (agg != null) {
-          builder.addVertexAggregateFunction(agg);
-        }
-      }
-    }
-
-    if (eAggs.size() > 0) {
-      for (AggregateFunction agg: eAggs) {
-        if (agg != null) {
-          builder.addEdgeAggregateFunction(agg);
-        }
-      }
-    }
-
-    if (vertexKeys.size() > 0) {
-      for (String vKey : vertexKeys) {
-        builder.addVertexGroupingKey(vKey);
-      }
-    }
-
-    if (edgeKeys.size() > 0) {
-      for (String eKey : edgeKeys) {
-        builder.addEdgeGroupingKey(eKey);
-      }
-    }
-    return builder.build();
   }
 
   /**
@@ -458,17 +441,17 @@ public class GroupingBenchmark extends AbstractRunner {
   }
 
   /**
-   * Method to make sure every min or max aggregation function gets a propertyKey
+   * Method to make sure every min, max or average aggregation function gets a propertyKey
    *
    * @param aggs        aggregators as whole string
    * @param keys        aggregator keys as whole string
-   * @return true if there are enough aggregation keys
+   * @return true if the number of keys is equal or bigger than the number of min and max aggregations
    */
   private static boolean checkIfEnoughKeys(String aggs, String keys ) {
 
     List<String> aggsList = getKeys(aggs);
     if (keys == null) {
-      if (aggsList.contains("max") || aggsList.contains("min")) {
+      if (aggsList.contains("max") || aggsList.contains("min") || aggsList.contains("mean")) {
         throw new IllegalArgumentException(
           "A propertyKey is needed for every min/max aggregation function. Use -vak or -eak options when " +
             "starting the program!");
@@ -477,7 +460,7 @@ public class GroupingBenchmark extends AbstractRunner {
       List<String> keyList = getKeys(keys);
       int i = 0;
       for (String s : aggsList) {
-        if (s.equals("count")) {
+        if (s.equals("count")||s.equals("none")) {
           i++;
         }
       }
