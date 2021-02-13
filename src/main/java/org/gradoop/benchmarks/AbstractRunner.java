@@ -29,6 +29,14 @@ import org.gradoop.flink.io.impl.csv.indexed.IndexedCSVDataSink;
 import org.gradoop.flink.io.impl.csv.indexed.IndexedCSVDataSource;
 import org.gradoop.flink.model.impl.epgm.LogicalGraph;
 import org.gradoop.flink.util.GradoopFlinkConfig;
+import org.gradoop.temporal.io.api.TemporalDataSink;
+import org.gradoop.temporal.io.api.TemporalDataSource;
+import org.gradoop.temporal.io.impl.csv.TemporalCSVDataSink;
+import org.gradoop.temporal.io.impl.csv.TemporalCSVDataSource;
+import org.gradoop.temporal.io.impl.csv.indexed.TemporalIndexedCSVDataSink;
+import org.gradoop.temporal.io.impl.csv.indexed.TemporalIndexedCSVDataSource;
+import org.gradoop.temporal.model.impl.TemporalGraph;
+import org.gradoop.temporal.util.TemporalGradoopConfig;
 
 import java.io.File;
 import java.io.IOException;
@@ -87,9 +95,12 @@ public abstract class AbstractRunner {
    * @return EPGM logical graph
    * @throws IOException on failure
    */
-  protected static LogicalGraph readLogicalGraph(String directory, String format)
-      throws IOException {
+  protected static LogicalGraph readLogicalGraph(String directory, String format) throws IOException {
     return getDataSource(directory, format).getLogicalGraph();
+  }
+
+  protected static TemporalGraph readTemporalGraph(String directory, String format) throws IOException {
+    return getTemporalDataSource(directory, format).getTemporalGraph();
   }
 
   /**
@@ -114,6 +125,12 @@ public abstract class AbstractRunner {
   protected static void writeLogicalGraph(LogicalGraph graph, String directory, String format)
       throws Exception {
     graph.writeTo(getDataSink(directory, format, graph.getConfig()), true);
+    getExecutionEnvironment().execute();
+  }
+
+  protected static void writeTemporalGraph(TemporalGraph graph, String directory, String format)
+    throws Exception {
+    graph.writeTo(getTemporalDataSink(directory, format, graph.getConfig()), true);
     getExecutionEnvironment().execute();
   }
 
@@ -176,6 +193,21 @@ public abstract class AbstractRunner {
     }
   }
 
+  private static TemporalDataSource getTemporalDataSource(String directory, String format) {
+    directory = appendSeparator(directory);
+    TemporalGradoopConfig config = TemporalGradoopConfig.createConfig(getExecutionEnvironment());
+    format = format.toLowerCase();
+
+    switch (format) {
+    case "csv":
+      return new TemporalCSVDataSource(directory, config);
+    case "indexed":
+      return new TemporalIndexedCSVDataSource(directory, config);
+    default:
+      throw new IllegalArgumentException("Unsupported format: " + format);
+    }
+  }
+
   /**
    * Returns an EPGM DataSink for a given directory and format.
    *
@@ -193,6 +225,20 @@ public abstract class AbstractRunner {
       return new CSVDataSink(directory, config);
     case "indexed":
       return new IndexedCSVDataSink(directory, config);
+    default:
+      throw new IllegalArgumentException("Unsupported format: " + format);
+    }
+  }
+
+  private static TemporalDataSink getTemporalDataSink(String directory, String format, TemporalGradoopConfig config) {
+    directory = appendSeparator(directory);
+    format = format.toLowerCase();
+
+    switch (format) {
+    case "csv":
+      return new TemporalCSVDataSink(directory, config);
+    case "indexed":
+      return new TemporalIndexedCSVDataSink(directory, config);
     default:
       throw new IllegalArgumentException("Unsupported format: " + format);
     }
