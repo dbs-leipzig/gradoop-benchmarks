@@ -21,9 +21,6 @@ import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FileSystem;
-import org.apache.hadoop.conf.Configuration;
-import org.gradoop.flink.model.impl.operators.matching.common.statistics.GraphStatistics;
-import org.gradoop.flink.model.impl.operators.matching.common.statistics.GraphStatisticsHDFSReader;
 import org.gradoop.temporal.model.impl.TemporalGraph;
 import org.gradoop.temporal.model.impl.TemporalGraphCollection;
 
@@ -35,17 +32,14 @@ import java.util.concurrent.TimeUnit;
  * The benchmark is expected to be executed on the LDBC data set.
  */
 public class PatternMatchingBenchmark extends BaseTpgmBenchmark {
-
-  private static final String OPTION_STATISTICS_PATH = "s";
-  private static final String OPTION_INPUT_FORMAT = "f";
-  static String STATISTICS_PATH;
-  static String INPUT_FORMAT;
-
-  static {
-    OPTIONS.addOption(OPTION_STATISTICS_PATH, "statistics", true, "Path to statistics directory.");
-    OPTIONS.addRequiredOption(OPTION_INPUT_FORMAT, "format", true, "Input graph format (csv, indexed).");
-  }
-
+  /**
+   * Main program to run the benchmark. Arguments are the available options.
+   * Example: {@code /path/to/flink run -c org.gradoop.benchmarks.tpgm.PatternMatchingBenchmark
+   * path/to/gradoop-benchmarks.jar -i hdfs:///graph -f indexed -o hdfs:///output -c results.csv}
+   *
+   * @param args program arguments
+   * @throws Exception in case of an error
+   */
   public static void main(String[] args) throws Exception {
     CommandLine cmd = parseArguments(args, PatternMatchingBenchmark.class.getName());
 
@@ -54,12 +48,6 @@ public class PatternMatchingBenchmark extends BaseTpgmBenchmark {
     }
 
     readBaseCMDArguments(cmd);
-
-    STATISTICS_PATH = cmd.getOptionValue(OPTION_STATISTICS_PATH);
-    INPUT_FORMAT = cmd.getOptionValue(OPTION_INPUT_FORMAT);
-
-    TemporalGraphCollection results;
-    GraphStatistics statistics;
 
     TemporalGraph graph = readTemporalGraph(INPUT_PATH, INPUT_FORMAT);
 
@@ -73,14 +61,7 @@ public class PatternMatchingBenchmark extends BaseTpgmBenchmark {
       "      po.val_from.after(Timestamp(2012-05-30)) AND " +
       "      po.val_from.before(Timestamp(2012-06-02))";
 
-
-    if (STATISTICS_PATH != null) {
-      statistics = GraphStatisticsHDFSReader.read(STATISTICS_PATH, new Configuration());
-    } else {
-      statistics = new GraphStatistics(1L, 1L, 1L, 1L);
-    }
-
-    results = graph.query(query, statistics);
+    TemporalGraphCollection results = graph.query(query);
 
     // only count the results and write it to a csv file
     DataSet<Tuple2<String, Long>> sum = results.getGraphHeads()
@@ -103,12 +84,9 @@ public class PatternMatchingBenchmark extends BaseTpgmBenchmark {
    * @throws IOException exception during file writing
    */
   private static void writeCSV(ExecutionEnvironment env) throws IOException {
-    String head = String.format("%s|%s|%s|%s|%s", "Parallelism", "dataset", "format", "stats", "Runtime(s)");
-
-    String tail = String.format("%s|%s|%s|%s|%s", env.getParallelism(), INPUT_PATH, INPUT_FORMAT,
-      STATISTICS_PATH != null ? "yes" : "no",
+    String head = String.format("%s|%s|%s|%s", "Parallelism", "dataset", "format", "Runtime(s)");
+    String tail = String.format("%s|%s|%s|%s", env.getParallelism(), INPUT_PATH, INPUT_FORMAT,
       env.getLastJobExecutionResult().getNetRuntime(TimeUnit.SECONDS));
-
     writeToCSVFile(head, tail);
   }
 }
