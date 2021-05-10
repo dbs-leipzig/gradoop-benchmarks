@@ -99,6 +99,16 @@ public abstract class AbstractRunner {
     return getDataSource(directory, format).getLogicalGraph();
   }
 
+  /**
+   * Reads a TPGM graph from a given directory. Currently there are two supported formats: {@code csv} which
+   * uses a {@link TemporalCSVDataSource} and {@code indexed} which uses a
+   * {@link TemporalIndexedCSVDataSource}.
+   *
+   * @param directory path to the TPGM database
+   * @param format format in which the graph is stored (csv, indexed)
+   * @return a TPGM graph instance
+   * @throws IOException in case of an error
+   */
   protected static TemporalGraph readTemporalGraph(String directory, String format) throws IOException {
     return getTemporalDataSource(directory, format).getTemporalGraph();
   }
@@ -119,7 +129,7 @@ public abstract class AbstractRunner {
    *
    * @param graph logical graph
    * @param directory output path
-   * @param format output format (csv, indexed)
+   * @param format output format
    * @throws Exception on failure
    */
   protected static void writeLogicalGraph(LogicalGraph graph, String directory, String format)
@@ -128,6 +138,14 @@ public abstract class AbstractRunner {
     getExecutionEnvironment().execute();
   }
 
+  /**
+   * Writes a temporal graph into a given directory.
+   *
+   * @param graph the temporal graph to write
+   * @param directory the target directory
+   * @param format the output format (csv, indexed)
+   * @throws Exception in case of an error
+   */
   protected static void writeTemporalGraph(TemporalGraph graph, String directory, String format)
     throws Exception {
     graph.writeTo(getTemporalDataSink(directory, format, graph.getConfig()), true);
@@ -193,6 +211,14 @@ public abstract class AbstractRunner {
     }
   }
 
+  /**
+   * Creates a TPGM data source for a given directory and format. The format string {@code csv} creates a
+   * {@link TemporalCSVDataSource} whereas {@code indexed} creates a {@link TemporalIndexedCSVDataSource}.
+   *
+   * @param directory the input path to the TPGM database
+   * @param format the input format
+   * @return a data source instance
+   */
   private static TemporalDataSource getTemporalDataSource(String directory, String format) {
     directory = appendSeparator(directory);
     TemporalGradoopConfig config = TemporalGradoopConfig.createConfig(getExecutionEnvironment());
@@ -209,7 +235,7 @@ public abstract class AbstractRunner {
   }
 
   /**
-   * Returns an EPGM DataSink for a given directory and format.
+   * Returns an EPGM DataSink
    *
    * @param directory output path
    * @param format output format (csv, indexed)
@@ -230,6 +256,14 @@ public abstract class AbstractRunner {
     }
   }
 
+  /**
+   * Returns a TPGM data sink for a given directory and format.
+   *
+   * @param directory the directory where the graph will be stored
+   * @param format the output format (csv, indexed)
+   * @param config the temporal config
+   * @return a temporal data sink instance
+   */
   private static TemporalDataSink getTemporalDataSink(String directory, String format, TemporalGradoopConfig config) {
     directory = appendSeparator(directory);
     format = format.toLowerCase();
