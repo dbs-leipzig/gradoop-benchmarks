@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 - 2020 Leipzig University (Database Research Group)
+ * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,9 @@ public class PatternMatchingBenchmark extends BaseTpgmBenchmark {
    * Main program to run the benchmark. Arguments are the available options.
    * Example: {@code /path/to/flink run -c org.gradoop.benchmarks.tpgm.PatternMatchingBenchmark
    * path/to/gradoop-benchmarks.jar -i hdfs:///graph -f indexed -o hdfs:///output -c results.csv}
+   * <p>
+   * It is advisable to use the {@link org.gradoop.temporal.io.impl.csv.indexed.TemporalIndexedCSVDataSource}
+   * for a better performance by using parameter {@code -f indexed}.
    *
    * @param args program arguments
    * @throws Exception in case of an error
@@ -61,7 +64,7 @@ public class PatternMatchingBenchmark extends BaseTpgmBenchmark {
       "      po.val_from.after(Timestamp(2012-05-30)) AND " +
       "      po.val_from.before(Timestamp(2012-06-02))";
 
-    TemporalGraphCollection results = graph.query(query);
+    TemporalGraphCollection results = graph.temporalQuery(query);
 
     // only count the results and write it to a csv file
     DataSet<Tuple2<String, Long>> sum = results.getGraphHeads()
