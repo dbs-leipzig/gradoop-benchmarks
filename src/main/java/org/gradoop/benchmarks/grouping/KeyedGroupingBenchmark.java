@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ * Copyright © 2014 - 2024 Leipzig University (Database Research Group)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -226,7 +226,7 @@ public class KeyedGroupingBenchmark extends AbstractRunner {
 
       vertexAggregateFunctions = Arrays.asList(
         new Count("count"),
-        new MinTime("minTime", DIMENSION, TimeDimension.Field.FROM));
+        new MinTime(DIMENSION, TimeDimension.Field.FROM, "minTime"));
 
       edgeAggregateFunctions = Collections.singletonList(new Count("count"));
       break;
@@ -245,7 +245,7 @@ public class KeyedGroupingBenchmark extends AbstractRunner {
 
       edgeAggregateFunctions = Arrays.asList(
         new Count("count"),
-        new MaxTime("maxTime", DIMENSION, TimeDimension.Field.FROM));
+        new MaxTime(DIMENSION, TimeDimension.Field.FROM, "maxTime"));
       break;
 
     default:
