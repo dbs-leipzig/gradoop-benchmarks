@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 - 2021 Leipzig University (Database Research Group)
+ * Copyright © 2014 - 2024 Leipzig University (Database Research Group)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,12 +71,12 @@ public class AggregationBenchmark extends BaseTpgmBenchmark {
 
     // get the diff
     TemporalGraph aggregate = graph.aggregate(
-      new MinVertexTime("minVertexValidFrom", timeDimension, TimeDimension.Field.FROM),
-      new MinEdgeTime("minEdgeValidFrom", timeDimension, TimeDimension.Field.FROM),
-      new MaxTime("maxValidFrom", timeDimension, TimeDimension.Field.FROM),
-      new MaxVertexTime("maxVertexValidTo", timeDimension, TimeDimension.Field.TO),
-      new MaxEdgeTime("maxEdgeValidTo", timeDimension, TimeDimension.Field.TO),
-      new MinTime("minValidTo", timeDimension, TimeDimension.Field.TO),
+      new MinVertexTime(timeDimension, TimeDimension.Field.FROM, "minVertexValidFrom"),
+      new MinEdgeTime(timeDimension, TimeDimension.Field.FROM, "minEdgeValidFrom"),
+      new MaxTime(timeDimension, TimeDimension.Field.FROM, "maxValidFrom"),
+      new MaxVertexTime(timeDimension, TimeDimension.Field.TO, "maxVertexValidTo"),
+      new MaxEdgeTime(timeDimension, TimeDimension.Field.TO, "maxEdgeValidTo"),
+      new MinTime(timeDimension, TimeDimension.Field.TO, "minValidTo"),
       new AverageDuration("avgDuration", timeDimension),
       new AverageEdgeDuration("avgEdgeDuration", timeDimension),
       new AverageVertexDuration("avgVertexDuration", timeDimension));
